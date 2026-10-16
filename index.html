@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rs-Cb Co. Studio</title>
+  <meta name="description" content="Interactive media showcase and video studio for Rs-Cb Co., featuring reel playback, frame extraction, and real-time visual grading." />
+  <meta property="og:title" content="Rs-Cb Co. Studio" />
+  <meta property="og:description" content="Interactive media showcase and video studio for Rs-Cb Co., featuring reel playback, frame extraction, and real-time visual grading." />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 700vh;
+      background-color: #ffffff;
+      overflow-x: hidden;
+    }
+    video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      pointer-events: none;
+      background-color: #ffffff;
+      z-index: 1;
+      transition: opacity 0.15s ease-out, visibility 0.15s;
+    }
+    #hero-title {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50; /* Above video (z-index: 1), behind obj.png (z-index: 100) */
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: clamp(4.2rem, 15.5vw, 13.5rem);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+      color: #111111;
+      text-align: center;
+      line-height: 0.82;
+      pointer-events: none;
+      user-select: none;
+      width: 100vw;
+      width: 100dvw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      will-change: opacity;
+      transition: opacity 0.05s linear;
+    }
+    #hero-title .title-line {
+      display: block;
+      will-change: transform;
+      transition: transform 0.05s linear;
+    }
+    #hero-title .line-upper {
+      transform: translateY(0);
+    }
+    #hero-title .line-lower {
+      transform: translateY(0);
+    }
+    #obj {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      pointer-events: none;
+      z-index: 100; /* Front-most layer directly over hero title */
+      opacity: 1;
+      will-change: opacity;
+      transition: opacity 0.05s linear;
+    }
+
+    /* Floating Studio Layer Toolbar */
+    .layer-bar {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.5rem;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 9999px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+      user-select: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    }
+    .layer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border: none;
+      border-radius: 9999px;
+      background: transparent;
+      color: #666666;
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+      outline: none;
+    }
+    .layer-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #111111;
+    }
+    .layer-btn.active {
+      background: #111111;
+      color: #ffffff;
+    }
+    .layer-btn.master-btn {
+      background: #f1f2f4;
+      color: #1f2937;
+      font-weight: 700;
+    }
+    .layer-btn.master-btn:hover {
+      background: #e5e7eb;
+    }
+    .layer-btn.master-btn.all-off {
+      background: #e11d48;
+      color: #ffffff;
+    }
+    .divider {
+      width: 1px;
+      height: 1.15rem;
+      background: rgba(0, 0, 0, 0.1);
+      margin: 0 0.15rem;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #9ca3af;
+      transition: background 0.15s ease-out;
+    }
+    .layer-btn.active .dot {
+      background: #10b981;
+    }
+    .layer-btn:not(.active) .dot {
+      background: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" src="./Nested.mp4" preload="auto" muted playsinline></video>
+  <h1 id="hero-title">
+    <span class="title-line line-upper">FORM IN</span>
+    <span class="title-line line-lower">MOTION</span>
+  </h1>
+  <img id="obj" src="./obj.png?v=official" alt="" />
+
+  <!-- Layer Controller Toolbar -->
+  <div id="layer-controls" class="layer-bar">
+    <button id="btn-all" class="layer-btn master-btn" title="Switch off all layers or restore all (Key: A)">
+      <span class="icon">⊘</span>
+      <span class="label">Switch Off All</span>
+    </button>
+    <div class="divider"></div>
+    <button id="btn-video" class="layer-btn active" title="Toggle Video Layer (Key: 1)">
+      <span class="dot"></span>
+      <span class="label">Video</span>
+    </button>
+    <button id="btn-title" class="layer-btn active" title="Toggle Hero Title Layer (Key: 2)">
+      <span class="dot"></span>
+      <span class="label">Title</span>
+    </button>
+    <button id="btn-obj" class="layer-btn active" title="Toggle Obj Cutout Layer (Key: 3)">
+      <span class="dot"></span>
+      <span class="label">Obj Cutout</span>
+    </button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const heroTitle = document.getElementById('hero-title');
+    const lineUpper = document.querySelector('#hero-title .line-upper');
+    const lineLower = document.querySelector('#hero-title .line-lower');
+    const obj = document.getElementById('obj');
+
+    const btnAll = document.getElementById('btn-all');
+    const btnVideo = document.getElementById('btn-video');
+    const btnTitle = document.getElementById('btn-title');
+    const btnObj = document.getElementById('btn-obj');
+
+    // Layer Visibility State
+    const layerState = {
+      video: true,
+      title: true,
+      obj: true
+    };
+
+    let targetTime = 0;
+    let renderedTime = 0;
+    let isSeeking = false;
+    let pendingTime = null;
+
+    // Stage 1 threshold: First 14% of scroll is dedicated to intro exit.
+    // Hero title fades out first behind obj.png, then obj.png fades out second.
+    // Video does NOT play until both are completely faded out.
+    const INTRO_THRESHOLD = 0.14;
+
+    function applyLayerVisibility() {
+      // 1. Video Layer
+      if (layerState.video) {
+        video.style.opacity = '1';
+        video.style.visibility = 'visible';
+      } else {
+        video.style.opacity = '0';
+        video.style.visibility = 'hidden';
+      }
+
+      // 2. Title & Obj layers
+      updateScene();
+
+      // 3. Update Button UI states
+      const allOff = !layerState.video && !layerState.title && !layerState.obj;
+      btnAll.classList.toggle('all-off', allOff);
+      btnAll.querySelector('.label').textContent = allOff ? 'Switch All On' : 'Switch Off All';
+
+      btnVideo.classList.toggle('active', layerState.video);
+      btnTitle.classList.toggle('active', layerState.title);
+      btnObj.classList.toggle('active', layerState.obj);
+    }
+
+    function updateScene() {
+      const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+      const scrollFraction = Math.min(Math.max(window.scrollY / scrollable, 0), 1);
+
+      // STAGE 1: Video stays at 0.000s while title fades out first, then obj.png fades out second
+      if (scrollFraction <= INTRO_THRESHOLD) {
+        targetTime = 0; // Video does not play until title & obj are gone
+
+        const p = scrollFraction / INTRO_THRESHOLD;
+
+        // 1. Hero Title: fades out and opposing slide-out FIRST (from p = 0.0 to p = 0.55)
+        let titleOpacity = 0;
+        let upperOffset = 150;
+        let lowerOffset = -150;
+
+        if (p <= 0.55) {
+          const tProgress = p / 0.55;
+          titleOpacity = Math.max(0, 1 - tProgress);
+          upperOffset = tProgress * 150;
+          lowerOffset = -tProgress * 150;
+        }
+
+        if (heroTitle && lineUpper && lineLower) {
+          if (layerState.title && titleOpacity > 0.002) {
+            heroTitle.style.opacity = titleOpacity.toFixed(3);
+            heroTitle.style.visibility = 'visible';
+            lineUpper.style.transform = `translateY(${upperOffset.toFixed(1)}px)`;
+            lineLower.style.transform = `translateY(${lowerOffset.toFixed(1)}px)`;
+          } else {
+            heroTitle.style.opacity = '0';
+            heroTitle.style.visibility = 'hidden';
+            lineUpper.style.transform = `translateY(150px)`;
+            lineLower.style.transform = `translateY(-150px)`;
+          }
+        }
+
+        // 2. Obj Cutout Layer: stays solid in front, then fades out AFTER title (from p = 0.45 to p = 1.0)
+        let objOpacity = 0;
+        if (p <= 0.45) {
+          objOpacity = 1.0;
+        } else if (p < 1.0) {
+          objOpacity = Math.max(0, 1 - (p - 0.45) / 0.55);
+        }
+
+        if (obj) {
+          if (layerState.obj && objOpacity > 0.002) {
+            obj.style.opacity = objOpacity.toFixed(3);
+            obj.style.visibility = 'visible';
+          } else {
+            obj.style.opacity = '0';
+            obj.style.visibility = 'hidden';
+          }
+        }
+      } else {
+        // STAGE 2: Title & Obj are totally out. Video begins playback and scrubbing!
+        if (heroTitle) {
+          heroTitle.style.opacity = '0';
+          heroTitle.style.visibility = 'hidden';
+        }
+        if (obj) {
+          obj.style.opacity = '0';
+          obj.style.visibility = 'hidden';
+        }
+
+        const videoProgress = (scrollFraction - INTRO_THRESHOLD) / (1 - INTRO_THRESHOLD);
+        const dur = (video.duration && !isNaN(video.duration)) ? video.duration : 8.78;
+        targetTime = videoProgress * dur;
+      }
+    }
+
+    // Button Click Listeners
+    btnAll.addEventListener('click', () => {
+      const anyOn = layerState.video || layerState.title || layerState.obj;
+      layerState.video = !anyOn;
+      layerState.title = !anyOn;
+      layerState.obj = !anyOn;
+      applyLayerVisibility();
+    });
+
+    btnVideo.addEventListener('click', () => {
+      layerState.video = !layerState.video;
+      applyLayerVisibility();
+    });
+
+    btnTitle.addEventListener('click', () => {
+      layerState.title = !layerState.title;
+      applyLayerVisibility();
+    });
+
+    btnObj.addEventListener('click', () => {
+      layerState.obj = !layerState.obj;
+      applyLayerVisibility();
+    });
+
+    // Keyboard shortcuts for layer inspection
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === '1') { btnVideo.click(); }
+      else if (e.key === '2') { btnTitle.click(); }
+      else if (e.key === '3') { btnObj.click(); }
+      else if (e.key.toLowerCase() === 'a') { btnAll.click(); }
+    });
+
+    function syncFrame() {
+      updateScene();
+
+      const diff = targetTime - renderedTime;
+      if (Math.abs(diff) > 0.002) {
+        renderedTime += diff * 0.25;
+        if (Math.abs(targetTime - renderedTime) < 0.004) {
+          renderedTime = targetTime;
+        }
+
+        if (!isSeeking && video.readyState >= 2) {
+          isSeeking = true;
+          video.currentTime = renderedTime;
+        } else {
+          pendingTime = renderedTime;
+        }
+      }
+
+      requestAnimationFrame(syncFrame);
+    }
+
+    video.addEventListener('seeked', () => {
+      isSeeking = false;
+      if (pendingTime !== null) {
+        const nextTime = pendingTime;
+        pendingTime = null;
+        if (Math.abs(video.currentTime - nextTime) > 0.002) {
+          isSeeking = true;
+          video.currentTime = nextTime;
+        }
+      }
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+      video.pause();
+      renderedTime = 0;
+      video.currentTime = 0;
+      applyLayerVisibility();
+    });
+
+    const primeVideo = () => {
+      if (video.paused && video.currentTime === 0) {
+        video.play().then(() => video.pause()).catch(() => {});
+      }
+    };
+    window.addEventListener('touchstart', primeVideo, { once: true, passive: true });
+    window.addEventListener('wheel', primeVideo, { once: true, passive: true });
+    window.addEventListener('scroll', primeVideo, { once: true, passive: true });
+
+    applyLayerVisibility();
+    requestAnimationFrame(syncFrame);
+  </script>
+</body>
+</html>
